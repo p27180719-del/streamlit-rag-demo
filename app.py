@@ -10,7 +10,7 @@ from langchain_community.embeddings import FakeEmbeddings
 
 st.set_page_config(page_title="PDF RAG Chat", layout="wide")
 
-st.title("PDF RAG Chat with Memory & Citations")
+st.title("AI ASSISTANT")
 
 
 # -------------------------
