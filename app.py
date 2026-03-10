@@ -4,38 +4,38 @@ from langchain_core.documents import Document
 from langchain_text_splitters import CharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import FakeEmbeddings
+import PyPDF2
 
 
-st.title("Free RAG Demo (No API Key)")
-
-
-# -----------------
-# Documents
-# -----------------
-def prepare_documents():
-
-    docs = [
-        "Azure Cloud Subscription costs 199 dollars per month",
-        "Power BI Pro costs 9.99 dollars per user",
-        "Microsoft 365 Business costs 12.50 per user",
-        "FAISS is used for vector search",
-        "RAG means Retrieval Augmented Generation",
-    ]
-
-    return docs
+st.title("PDF RAG Search (Free)")
 
 
 # -----------------
-# Split
+# Read PDF
 # -----------------
-def split_documents(docs):
+def read_pdf(file):
+
+    pdf_reader = PyPDF2.PdfReader(file)
+
+    text = ""
+
+    for page in pdf_reader.pages:
+        text += page.extract_text()
+
+    return text
+
+
+# -----------------
+# Split text
+# -----------------
+def split_text(text):
 
     splitter = CharacterTextSplitter(
-        chunk_size=100,
-        chunk_overlap=0
+        chunk_size=500,
+        chunk_overlap=50
     )
 
-    chunks = splitter.split_text("\n".join(docs))
+    chunks = splitter.split_text(text)
 
     return [Document(page_content=c) for c in chunks]
 
@@ -43,46 +43,43 @@ def split_documents(docs):
 # -----------------
 # Vector store
 # -----------------
-def create_vector_store(chunks):
+def create_store(docs):
 
     embeddings = FakeEmbeddings(size=32)
 
-    vector_store = FAISS.from_documents(
-        chunks,
+    store = FAISS.from_documents(
+        docs,
         embeddings
     )
 
-    return vector_store
+    return store
 
 
 # -----------------
-# Ask
+# UI upload
 # -----------------
-def ask_rag(question):
+uploaded_file = st.file_uploader("Upload PDF", type="pdf")
 
-    docs = prepare_documents()
-
-    chunks = split_documents(docs)
-
-    vector_store = create_vector_store(chunks)
-
-    retriever = vector_store.as_retriever()
-
-    results = retriever.invoke(question)
-
-    context = "\n".join([r.page_content for r in results])
-
-    return context
-
-
-# -----------------
-# UI
-# -----------------
 query = st.text_input("Ask question")
 
 if st.button("Search"):
 
-    answer = ask_rag(query)
+    if uploaded_file is None:
+        st.write("Upload PDF first")
 
-    st.write("### Result")
-    st.write(answer)
+    else:
+
+        text = read_pdf(uploaded_file)
+
+        docs = split_text(text)
+
+        store = create_store(docs)
+
+        retriever = store.as_retriever()
+
+        results = retriever.invoke(query)
+
+        answer = "\n".join([r.page_content for r in results])
+
+        st.write("### Result")
+        st.write(answer)
